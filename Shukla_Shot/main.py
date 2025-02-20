@@ -1,23 +1,27 @@
-import pandas as pd
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import joblib
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
+import numpy as np
 
-# Load dataset (Replace 'your_dataset.csv' with actual dataset path)
-df = pd.read_csv("../Shukla_Shot/crop_prediction_model.pkl")  
+app = Flask(__name__)
+CORS(app)  # Enable CORS for frontend requests
 
-# Assuming the last column is the target variable
-X = df.iloc[:, :-1]  
-y = df.iloc[:, -1]   
+# Load your trained model
+model = joblib.load("crop_prediction_model.pkl")
 
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        data = request.json  # Get JSON data from frontend
+        features = np.array(data['features']).reshape(1, -1)  # Convert to array
+        
+        # Make prediction
+        prediction = model.predict(features)
+        
+        return jsonify({'prediction': prediction.tolist()})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
-# Train a RandomForest model
-model = RandomForestRegressor(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
-
-# Save the model
-joblib.dump(model, "crop_prediction_model.pkl")
-
-print("Model retrained and saved as crop_prediction_model.pkl")
+if __name__ == '__main__':
+    app.run(debug=True)
